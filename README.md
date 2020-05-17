@@ -9,4 +9,4 @@ This repository contains scripts for processing OkSeq data.
 
 (4) make_strand_bias_plots.py will then plot this data as in Figs1 and 2 of https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6320713/
 
-Input data/results are also included.
+Input data and results are also included.  2 large files must be unzipped before running.
