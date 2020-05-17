@@ -17,6 +17,11 @@ else:
     print("Error: bad input.")
     exit(0)
 
+if(fastq_r2 == "."):
+    type="SE"
+else:
+    type="PE"
+
 picard_cmd = "/gpfs/share/apps/picard/2.18.11/libs/picard.jar"
 genome_file = "human.hg19.genome"
 chr_lengths = {'chr1': 249250621, 'chr2': 243199373, 'chr3': 198022430, 'chr4': 191154276, 'chr5': 180915260, 'chr6': 171115067,
@@ -118,13 +123,17 @@ with open(logfile,'w') as fw:
         step1=True
         step2=True
         step3=True
-        step4=True
-        step5=True
+        step4=True # only for PE
+        step5=True # only for PE
         step6=True
 
         output_dir = os.path.split(fastq_r1)[0] + '/'
-        trimmed_r1 = fastq_r1.rstrip(".fastq.gz") + "_val_1.fq.gz"  # should fix this.
-        trimmed_r2 = fastq_r2.rstrip(".fastq.gz") + "_val_2.fq.gz"  # should fix this.
+        if(type=="PE"):
+            trimmed_r1 = fastq_r1.rstrip(".fastq.gz") + "_val_1.fq.gz"  # should fix this.
+            trimmed_r2 = fastq_r2.rstrip(".fastq.gz") + "_val_2.fq.gz"  # should fix this.
+        else:
+            trimmed_r1 = fastq_r1.rstrip(".fastq.gz") + "_trimmed.fq.gz"  # should fix this.
+            trimmed_r2=""
         bamfile = samfile[:-4] + ".bam"
         sortedbamfile = bamfile[:-4] + ".sorted.bam"
         rmdupfile = bamfile[:-4] + ".rmdup.bam"
@@ -146,20 +155,29 @@ with open(logfile,'w') as fw:
         if(step_trim):
             fw.write("Fastqc/Trim Step: running fastqc and Trimgalore.\n")
             run_cmd("fastqc " + fastq_r1, fw)
-            run_cmd("fastqc " + fastq_r2, fw)
-            run_cmd("trim_galore --paired --fastqc --output_dir " + output_dir + " " + fastq_r1 + " " + fastq_r2, fw)
+            if(type=="PE"):
+                run_cmd("fastqc " + fastq_r2, fw)
+                run_cmd("trim_galore --paired --fastqc --output_dir " + output_dir + " " + fastq_r1 + " " + fastq_r2, fw)
+            else: # SE
+                run_cmd("trim_galore --fastqc --length 10 --output_dir " + output_dir + " " + fastq_r1, fw)
             fw.write('\n')
 
         # Step 'align'
         if(step_align):
             fw.write("Alignment step: running bowtie2.\n")
-            run_cmd("bowtie2 -p 8 -x hg19 -1 " + trimmed_r1 + " -2 " + trimmed_r2 + " > " + samfile, fw)
+            if(type=="PE"):
+                run_cmd("bowtie2 -p 8 -x hg19 -1 " + trimmed_r1 + " -2 " + trimmed_r2 + " > " + samfile, fw)
+            else:
+                run_cmd("bowtie2 -p 8 -x hg19 -U " + trimmed_r1 + " > " + samfile, fw)
             fw.write('\n')
 
         # Step 1, extract only paired reads that have mapq score >= 30, and convert to bam
         if(step1):
             fw.write("Step 1: Extract only paired reads that have mapq score >= 30, and convert sam to bam file.\n")
-            run_cmd("samtools view -q 30 -f 0x2 -b " + samfile + " > " + bamfile, fw)
+            if(type=="PE"):
+                run_cmd("samtools view -q 30 -f 0x2 -b " + samfile + " > " + bamfile, fw)
+            else:
+                run_cmd("samtools view -q 30 -b " + samfile + " > " + bamfile, fw)
             fw.write('\n')
 
         # Step 2, Picard remove duplicates:
@@ -170,45 +188,52 @@ with open(logfile,'w') as fw:
                     " METRICS_FILE=" + metricsfile + " REMOVE_DUPLICATES=true ASSUME_SORT_ORDER=coordinate", fw)
             fw.write('\n')
 
-        # Step 3, use Picard to sort by read name, then convert bam to bedpe using "bedtools bamtobed"
-        if(step3):
-            fw.write("Step 3: Use Picard to sort by read name and then convert bam to bedpe using 'bedtools bamtobed'.\n")
-            run_cmd("java -jar " + picard_cmd + " SortSam I=" + rmdupfile + " O=" + namesortedfile + " SORT_ORDER=queryname", fw)
-            run_cmd("bedtools bamtobed -i " + namesortedfile + " -bedpe -mate1 > " + bedpefile, fw)
+        if(type=="PE"):
+            # Step 3, use Picard to sort by read name, then convert bam to bedpe using "bedtools bamtobed"
+            if(step3):
+                fw.write("Step 3: Use Picard to sort by read name and then convert bam to bedpe using 'bedtools bamtobed'.\n")
+                run_cmd("java -jar " + picard_cmd + " SortSam I=" + rmdupfile + " O=" + namesortedfile + " SORT_ORDER=queryname", fw)
+                run_cmd("bedtools bamtobed -i " + namesortedfile + " -bedpe -mate1 > " + bedpefile, fw)
 
-        # Step 4, loop through the bedpe file and combine R1/R2 pairs to a single fragment;
-        # split the fwd and rev strand mapped fragments into separate files
-        if(step4):
-            fw.write("Step 4: Combine R1/R2 pairs in bedpe file to single fragment and split fragments mapped to the fwd/rev strand into separate bed files.\n")
-            fw.flush()
-            convert_bedpe_to_bed(bedpefile, bedfile_fwd, bedfile_rev)
+            # Step 4, loop through the bedpe file and combine R1/R2 pairs to a single fragment;
+            # split the fwd and rev strand mapped fragments into separate files
+            if(step4):
+                fw.write("Step 4: Combine R1/R2 pairs in bedpe file to single fragment and split fragments mapped to the fwd/rev strand into separate bed files.\n")
+                fw.flush()
+                convert_bedpe_to_bed(bedpefile, bedfile_fwd, bedfile_rev)
 
-        # Step 5, sort and then convert back to bam files (bedtools bedtobam) and run deepTools bamCoverage,
-        # this will create the histogram of coverage for every 1KB
-        # Note: the genome file must be present in the dir as 'human.hg19.genome',
-        # and for bamCoverage, an index file (.bai) must be created (samtools index)
-        if(step5):
-            fw.write("Step 5: Sort bed files by position and then convert back to bam format, create index files and then run deepTools to get bedgraph files.\n")
+            # Step 5, sort and then convert back to bam files (bedtools bedtobam) and run deepTools bamCoverage,
+            # this will create the histogram of coverage for every 1KB
+            # Note: the genome file must be present in the dir as 'human.hg19.genome',
+            # and for bamCoverage, an index file (.bai) must be created (samtools index)
+            if(step5):
+                fw.write("Step 5: Sort bed files by position and then convert back to bam format, create index files and then run deepTools to get bedgraph files.\n")
 
-            #sort by position
-            run_cmd("sort -k 1,1 " + bedfile_fwd + " > " + bedfile_fwd_sorted, fw)
-            run_cmd("sort -k 1,1 " + bedfile_rev + " > " + bedfile_rev_sorted, fw)
+                #sort by position
+                run_cmd("sort -k 1,1 " + bedfile_fwd + " > " + bedfile_fwd_sorted, fw)
+                run_cmd("sort -k 1,1 " + bedfile_rev + " > " + bedfile_rev_sorted, fw)
 
-            #bed to bam
-            run_cmd("bedToBam -i " + bedfile_fwd_sorted + " -g " + genome_file + " > " + bamfile_fwd, fw)
-            run_cmd("bedToBam -i " + bedfile_rev_sorted + " -g " + genome_file + " > " + bamfile_rev, fw)
+                #bed to bam
+                run_cmd("bedToBam -i " + bedfile_fwd_sorted + " -g " + genome_file + " > " + bamfile_fwd, fw)
+                run_cmd("bedToBam -i " + bedfile_rev_sorted + " -g " + genome_file + " > " + bamfile_rev, fw)
 
-            #sort bam file
-            run_cmd("samtools sort " + bamfile_fwd + " > " + sortedbamfile_fwd, fw)
-            run_cmd("samtools sort " + bamfile_rev + " > " + sortedbamfile_rev, fw)
+                #sort bam file
+                run_cmd("samtools sort " + bamfile_fwd + " > " + sortedbamfile_fwd, fw)
+                run_cmd("samtools sort " + bamfile_rev + " > " + sortedbamfile_rev, fw)
 
-            #make index
-            run_cmd("samtools index " + sortedbamfile_fwd, fw)
-            run_cmd("samtools index " + sortedbamfile_rev, fw)
+                #make index
+                run_cmd("samtools index " + sortedbamfile_fwd, fw)
+                run_cmd("samtools index " + sortedbamfile_rev, fw)
 
-            #convert to bedGraph
-            run_cmd("bamCoverage -b " + sortedbamfile_fwd + " -o " + bedGraph_fwd + " --binSize 1000 --outFileFormat bedgraph", fw)
-            run_cmd("bamCoverage -b " + sortedbamfile_rev + " -o " + bedGraph_rev + " --binSize 1000 --outFileFormat bedgraph", fw)
+                #convert to bedGraph
+                run_cmd("bamCoverage -b " + sortedbamfile_fwd + " -o " + bedGraph_fwd + " --binSize 1000 --outFileFormat bedgraph", fw)
+                run_cmd("bamCoverage -b " + sortedbamfile_rev + " -o " + bedGraph_rev + " --binSize 1000 --outFileFormat bedgraph", fw)
+        else:
+            if(step3):
+                fw.write("Step 3 (SE): Run genomeCoverageBed to convert bam to bedGraph for each strand.\n")
+
+                run_cmd("genomeCoverageBed -ibam "+rmdupfile+" -bg -strand + > "+bedGraph_fwd, fw)
+                run_cmd("genomeCoverageBed -ibam " + rmdupfile + " -bg -strand - > " + bedGraph_rev, fw)
 
         # Step 6, read in result from deepTools bamCoverage: one file for W and one for C
         # convert to a single txt file that places W and C in sep columns, cov for every 1kb
