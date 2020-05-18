@@ -3,6 +3,7 @@
 
 import subprocess
 import pandas as pd
+import numpy as np
 import sys
 import os
 
@@ -60,9 +61,76 @@ def convert_bedGraph_to_txt(infile_fwd, infile_rev, outfile):
         if (chr_lengths['chr' + chrom] < end):
             end = end - 1000
         for pos in range(1000, end + 1000, 1000):
-            f.write(
-                chrom + "\t" + str(pos) + '\t' + str(output_dicts[0]['chr' + chrom + '_' + str(pos)] / 1000.0) + '\t' +
-                str(output_dicts[1]['chr' + chrom + '_' + str(pos)] / 1000.0) + '\n')
+            f.write(chrom + "\t" + str(pos) + '\t' + str(output_dicts[0]['chr' + chrom + '_' + str(pos)] / 1000.0) +
+                '\t' + str(output_dicts[1]['chr' + chrom + '_' + str(pos)] / 1000.0) + '\n')
+
+def convert_bedGraph_to_txt_SE(infile_fwd, infile_rev, outfile):
+    dfs_to_save = {}
+    #dfs_to_save[infile_fwd] = pd.DataFrame()
+    #dfs_to_save[infile_rev] = pd.DataFrame()
+    for cur_file in [infile_fwd, infile_rev]:
+        print(cur_file)
+        df = pd.read_csv(cur_file, sep='\t', header=None, names=['chr', 'start', 'end', 'signal'])
+        dfs_to_save[cur_file] = pd.DataFrame()
+
+        for chr in chr_lengths.keys():
+            print(chr)
+
+            df_chr = df[df['chr'] == chr].copy()
+            df_chr = df_chr[df_chr['signal'] > 0]
+            df_chr.index = range(len(df_chr))
+
+            chr_i = chr.lstrip('chr')
+            if (chr_i == 'X'):
+                chr_i = 23.0
+            elif (chr_i == 'Y'):
+                chr_i = 24.0
+            else:
+                chr_i = float(chr_i)
+
+            # expand into dictionary
+            data = {}
+            #k_len = len(df_chr)
+            for k, row in df_chr.iterrows():
+                for l in range(row['start'] + 1, row['end'] + 1, 1):
+                    data[l] = row['signal']
+
+            # sum read count over every 1000 base pairs
+            cur_len = int(chr_lengths[chr] / 1000) * 1000
+            data_kb = np.empty([int(cur_len / 1000), 3], dtype=float)
+            arr_i = 0
+            arr_i_len = int(cur_len / 1000)
+            for kb_pos in range(0, cur_len, 1000):
+                if (arr_i % 10000 == 0):
+                    print(str(arr_i) + ' ' + str(arr_i_len))
+
+                sum = 0.0
+                for k in range(kb_pos + 1, kb_pos + 1000 + 1, 1):
+                    if (k in data):
+                        sum += data[k]
+                    # else read count is 0 at this position
+
+                data_kb[arr_i] = [chr_i, float(kb_pos + 1000), sum / 1000.0]
+                arr_i += 1
+
+            # save to file
+            to_save_temp = pd.DataFrame(data_kb, columns=['chr', 'pos', 'signal'])
+            to_save_temp['pos'] = to_save_temp['pos'].astype('int')
+
+            if (chr_i == 23.0):
+                to_save_temp['chr'] = 'X'
+            elif (chr_i == 24.0):
+                to_save_temp['chr'] = 'Y'
+            else:
+                to_save_temp['chr'] = str(int(chr_i))
+
+            dfs_to_save[cur_file] = dfs_to_save[cur_file].append(to_save_temp, sort=True)
+
+    # put the 2 together:
+    to_save = dfs_to_save[infile_fwd]
+    to_save['w'] = to_save['signal']
+    to_save['c'] = dfs_to_save[infile_rev]['signal']
+    to_save.to_csv(outfile, index=False, sep='\t', columns=['chr', 'pos', 'w', 'c'])
 
 def convert_bedpe_to_bed(input_file, output_file_fwd, output_file_rev):
     lengthlist_fwd = []
@@ -240,7 +308,10 @@ with open(logfile,'w') as fw:
         if(step6):
             fw.write("Step 6: Convert bedGraph files to final txt output file with columns for W and C coverage every 1kb.\n")
             fw.flush()
-            convert_bedGraph_to_txt(bedGraph_fwd, bedGraph_rev, final_outfile)
+            if(type == "PE"):
+                convert_bedGraph_to_txt(bedGraph_fwd, bedGraph_rev, final_outfile)
+            else:
+                convert_bedGraph_to_txt_SE(bedGraph_fwd, bedGraph_rev, final_outfile)
 
     except subprocess.CalledProcessError as e:
         fw.write("Exception occured (CalledProcessError): \n")
