@@ -67,11 +67,12 @@ if(make_panels_plots):
                                 plot_grad=True, grad_ylim=(-1,3.25), grad_filename='Fig2g_derivative')
 
 if(make_heatmaps):
-
+# PDF files were too large to upload to GitHub, jpg files are present in the repository
+# this script will create the PDF files
     # PMID: 30598550, Fig 2b, f, h
     # 2b Heatmap showing same data as in 2a, above - each row is the s.b. for a gene.  Rows sorted by FPKM.
-    # Note: for better visualization, we converted the pdf file produced by this function to a tif file using Apple's Previw App
-    # i.e. if using a Mac, right click on the file, Open with "Preview.app" and save as JPG at Best quality
+    # Note: for better visualization & smaller size, we converted the pdf file produced by this function to a jpg file
+    # using Apple's Previw App, i.e. if using a Mac, right click on the file, Open with "Preview.app" and save as JPG at Best quality
     pf.make_heatmap_plot_with_data([df_rpe_edu_2,], filter_col='', sort_col='fpkm', color='YlGnBu_r', filename='Fig2b')
 
     # 2f Heatmap showing same data as in 2e, above - each row is the s.b. for a gene.  Genes filtered by FPKM>median.
