@@ -8,7 +8,7 @@ This repository contains scripts for processing OkSeq data.
 
  (3) add_okazaki_data_to_site_list.py is the script that will then take the gene list and add columns for the OkSeq data -100 to 100 kb around TSS and TTS for each gene.
 
- (4) make_okseq_plots.py will then plot this data as in Figs1 and 2 of https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6320713/
+ (4) make_okseq_plots.py will then plot this data as strand bias plots, as in Figs1 and 2 of https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6320713/, as well as gene normalized strand bias plots and calculation of p-values for comparison of strand bias plots.
 
 
 Input data and results are also included.  (2 large files must be unzipped before running.)  
