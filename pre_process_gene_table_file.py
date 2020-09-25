@@ -3,13 +3,26 @@
 # option to add fpkm data if given
 
 import pandas as pd
+import sys
+
+if(len(sys.argv) >= 3):
+    data_dir = sys.argv[1]
+    sites_file = sys.argv[2]
+    rna_seq_data_file = sys.argv[3]
+    cell_line = sys.argv[4]
+    gene_alias_data_file = sys.argv[5]
+else:
+    print("Missing command line input.  Attempting to run with default settings.")
+    data_dir = "/Users/sarahkeegan/okseq_data"
+    sites_file = "hgTables.txt"
+    rna_seq_data_file = '/rna_seq_RPE/GSE89413_2016-10-30-NBL-cell-line-STAR-fpkm.txt'
+    cell_line = "RPE1"
+    gene_alias_data_file = '/gene_name_aliases/protein-coding_gene.txt'
 
 add_fpkm_data=True
 duplicate_filter = 'first' #'none' # 'canonical'
 allowed_chrs = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9','chr10','chr11','chr12','chr13','chr14',
                 'chr15','chr16','chr17','chr18','chr19','chr20','chr21','chr22']
-data_dir = "/Users/sarahkeegan/okseq_data"
-sites_file = "hgTables.txt"
 dupl_subset=['hg19.knownGene.chrom','hg19.kgXref.geneSymbol']
 #['hg19.kgXref.geneSymbol'] #['hg19.knownGene.chrom','hg19.kgXref.geneSymbol']
 
@@ -50,16 +63,15 @@ suffix=''
 
 if(add_fpkm_data):
     print("Adding fpkm data...")
+    # open fpkm table for RPE: may need to adjust the code below another cell line/file is used
+    # below code will pull the gene id's from a column named "GeneID" and the fpkm values from a column named "RPE1"
 
-    # open fpkm table for RPE
-    fpkm_data = {}
-    fpkm_data['RPE1'] = pd.read_table(data_dir + '/rna_seq_RPE/GSE89413_2016-10-30-NBL-cell-line-STAR-fpkm.txt')
-    fpkm_data['RPE1'].fillna({'RPE1': 0,}, inplace=True)
-    fpkm_data['RPE1'] = fpkm_data['RPE1'].filter(items=['GeneID', 'RPE1'])
+    fpkm_data = pd.read_table(data_dir + '/' + rna_seq_data_file)
+    fpkm_data.fillna({cell_line: 0,}, inplace=True)
+    fpkm_data = fpkm_data.filter(items=['GeneID', cell_line])
 
-    #####################
     # get gene alias list
-    gene_alias_file = pd.read_table(data_dir + '/gene_name_aliases/protein-coding_gene.txt')
+    gene_alias_file = pd.read_table(data_dir + '/' + gene_alias_data_file)
     #HUGO_gene_with_protein_product.txt', low_memory=False)  #protein-coding_gene.txt')
 
     main_row = 'Approved Symbol' #'symbol'  # 'Approved Symbol'
@@ -71,12 +83,9 @@ if(add_fpkm_data):
     # for each gene in fpkm data table, get gene name and all aliases
     # and set each of them to the fpkm value (using dict)
 
-    cell_line = 'RPE1'
-
-    cur_fpkm_data = fpkm_data[cell_line]
     fpkm_dict = {}
     no_replace = {}
-    for i, row in enumerate(cur_fpkm_data.iterrows()):
+    for i, row in enumerate(fpkm_data.iterrows()):
         row = row[1]
         fpkm_dict[row['GeneID'].strip(' ').upper()] = row[cell_line]
         no_replace[row['GeneID'].strip(' ').upper()]=1
@@ -115,19 +124,11 @@ if(add_fpkm_data):
         row=row[1]
         sym = row['hg19.kgXref.geneSymbol'].strip(' ').upper()
         if(sym in fpkm_dict):
-            if (cell_line == 'FT194'):
-                gene_len = row['hg19.knownGene.txEnd']-row['hg19.knownGene.txStart']
-                df_to_save.at[i, cell_line + '_fpkm'] = fpkm_dict[sym]/gene_len
-            else:
-                df_to_save.at[i,cell_line+'_fpkm']=fpkm_dict[sym]
+            df_to_save.at[i,cell_line+'_fpkm']=fpkm_dict[sym]
         else:
             genes_missing_fpkm_data[sym]=1
 
-    print("Number of genes from sites table with no fpkm data found (",cell_line,"): ", len(genes_missing_fpkm_data))
-
-    #drop genes with no fpkm data...? NO!
-    #df_to_save.dropna(subset=['RPE_fpkm'], inplace=True)
-    #print("Removed any genes with no fpkm data.  Length = ", len(df_to_save))
+    print("Number of genes from sites table with no fpkm data found:", len(genes_missing_fpkm_data))
     suffix += 'with_fpkm_'
 
 df_to_save.to_csv(data_dir + '/' + "hgTables_filtered_"+suffix+duplicate_filter+".txt", sep='\t')

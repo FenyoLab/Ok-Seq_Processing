@@ -11,24 +11,32 @@
 
 import pandas as pd
 import numpy as np
+import sys
+import os
 
-data_dir = "/Users/sarahkeegan/okseq_data"
-fpkm_prefix="RPE1"
+if(len(sys.argv) >= 3):
+    data_dir = sys.argv[1]
+    input_txt_file = sys.argv[2]
+    sites_file = sys.argv[3]
+    fpkm_prefix = sys.argv[4]
+    results_dir = sys.argv[5]
+else:
+    print("Missing command line input.  Attempting to run with default settings.")
+    data_dir = "/Users/sarahkeegan/okseq_data"
+    input_txt_file = "/raw_files/rpe/rpe_edu_2.txt"
+    sites_file = "hgTables_filtered_with_fpkm_first.txt"
+    fpkm_prefix = "RPE1"
+    results_dir = "strand_bias_plots"
+
 length_around_site = 200
 
 allowed_chrs = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9','chr10','chr11','chr12','chr13','chr14',
                 'chr15','chr16','chr17','chr18','chr19','chr20','chr21','chr22']
 
-sites_file = "hgTables_filtered_with_fpkm_first.txt"
-results_dir = "strand_bias_plots"
-
-raw_files_dir = "/raw_files/rpe"
-file_name = "rpe_edu_2.txt"
-
 # READ IN TXT FILES OF OKAZAKI W AND C READ COUNTS
 print("Reading in W/C Okazaki data...")
 
-all_data = pd.read_table(data_dir + '/' + raw_files_dir + '/' + file_name)
+all_data = pd.read_table(data_dir + '/' + input_txt_file)
 
 #correct small inconsistency in RPE raw files
 all_data.loc[all_data.chr > 1, 'pos'] = all_data.loc[all_data.chr > 1, 'pos']-1
@@ -52,7 +60,7 @@ for j in range(1, length_around_site + 1 + 1):
 gene_sites = pd.read_table(data_dir + '/' + sites_file)
 
 #rename fpkm col for the data source we are processing
-gene_sites['fpkm']=gene_sites['RPE1_fpkm']
+gene_sites['fpkm']=gene_sites[fpkm_prefix + '_fpkm']
 
 #for each gene, add W/C data as columns in the file, for all raw data files
 gene_sites.index = range(len(gene_sites))
@@ -119,5 +127,6 @@ for site in ['TSS','TTS']:
 #add w_rows and c_rows as additional columns
 gene_sites = pd.concat([gene_sites, w_rows_df['TSS'], c_rows_df['TSS'], w_rows_df['TTS'], c_rows_df['TTS']], axis=1)
 
+file_name=os.path.split(input_txt_file)[1]
 file_prefix = 'sites_table_with_distributions-' + file_name[:-4]
 gene_sites.to_csv(data_dir+'/'+results_dir+'/'+file_prefix + '.csv')

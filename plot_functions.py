@@ -116,7 +116,7 @@ def get_heatmap_data(data_df, around_mid=50):
 
 def load_data(sites_rm_na=('TSS','TTS')):
     # load file with data
-    df = pd.read_table(base_dir + '/' + "sites_table_with_distributions-" + rep_file_name + ".csv", sep=',', low_memory=False)
+    df = pd.read_table(base_dir + '/' + rep_file_name, sep=',', low_memory=False)
 
     #remove genes with n/a for any cols
     col_list_w = []
@@ -129,7 +129,7 @@ def load_data(sites_rm_na=('TSS','TTS')):
     df.dropna(axis=0, subset=col_list_w,inplace=True)
     df.dropna(axis=0, subset=col_list_c, inplace=True)
 
-    print("Loaded 'sites_table_with_distributions-" + rep_file_name + ".csv'")
+    print("Loaded "+ base_dir + '/' + rep_file_name)
     print(len(df))
 
     return df.copy()
@@ -636,7 +636,7 @@ def make_TSS_to_TTS_plots(df_list, colors=['black',], fn_ext='', min_len=5000, m
     fig_der.savefig(base_dir + '/' + filename + '_'+fn_ext+'.' + ext, transparent=True)
     fig_der.clf()
 
-def calculate_pvalue(data_df1, data_df2, filter_col, quartile_col, stat_range):
+def calculate_pvalue(data_df1, quartile_col, stat_range, data_df2="", filter_col=""):
     # compares data sets using kruskal wallis test.
     # if data_df2 is empty, quartile_col MUST be given b/c the Q1 will be compared to Q2, Q2 to Q3, and Q3 to Q4
 
