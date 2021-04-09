@@ -235,7 +235,7 @@ with open(logfile,'w') as fw:
                 run_cmd("fastqc " + fastq_r2, fw)
                 run_cmd("trim_galore --paired --fastqc --length 20 --quality 30 --output_dir " + output_dir + " " + fastq_r1 + " " + fastq_r2, fw)
             else: # SE
-                run_cmd("trim_galore --fastqc --length 30 --quality 30 --output_dir " + output_dir + " " + fastq_r1, fw)
+                run_cmd("trim_galore --fastqc --length 20 --quality 30 --output_dir " + output_dir + " " + fastq_r1, fw)
             fw.write('\n')
 
         # Step 'align'

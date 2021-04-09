@@ -15,13 +15,13 @@ outfile=$7 # final output file (should be .txt)
 module purge
 module unload python
 module load python/cpu/2.7.15-ES
-module load samtools
-module load picard
+module load samtools/1.10
+module load picard/2.18.11
 module load bedtools/2.27.1
-module load deeptools
+module load deeptools/3.2.1
 module load fastqc
 module load trimgalore/0.5.0
-module load bowtie2
+module load bowtie2/2.4.1
 
 python process_okseq_SE_PE.py $process_dir $final_output_dir $fastq_r1 $fastq_r2 $samfile $logfile $outfile 0
 
