@@ -36,10 +36,13 @@ allowed_chrs = ['chr1','chr2','chr3','chr4','chr5','chr6','chr7','chr8','chr9','
 # READ IN TXT FILES OF OKAZAKI W AND C READ COUNTS
 print("Reading in W/C Okazaki data...")
 
-all_data = pd.read_table(data_dir + '/' + input_txt_file)
+all_data = pd.read_table(data_dir + '/' + input_txt_file, low_memory=False)
+all_data = all_data[(all_data['chr'].astype('str') != 'X') & (all_data['chr'].astype('str') != 'Y')].copy()
+all_data['chr']=all_data['chr'].astype('int')
 
 #correct small inconsistency in RPE raw files
-all_data.loc[all_data.chr > 1, 'pos'] = all_data.loc[all_data.chr > 1, 'pos']-1
+if(fpkm_prefix=='RPE1'):
+    all_data.loc[all_data.chr > 1, 'pos'] = all_data.loc[all_data.chr > 1, 'pos']-1
 index_data = all_data.copy()
 index_data['row_index'] = range(len(index_data))
 index_data.drop(['w','c'], axis=1, inplace=True)
@@ -129,4 +132,8 @@ gene_sites = pd.concat([gene_sites, w_rows_df['TSS'], c_rows_df['TSS'], w_rows_d
 
 file_name=os.path.split(input_txt_file)[1]
 file_prefix = 'sites_table_with_distributions-' + file_name[:-4]
+
+if(not os.path.isdir(data_dir+'/'+results_dir)):
+    os.mkdir(data_dir+'/'+results_dir)
+
 gene_sites.to_csv(data_dir+'/'+results_dir+'/'+file_prefix + '.csv')
