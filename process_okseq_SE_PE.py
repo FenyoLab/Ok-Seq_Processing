@@ -8,12 +8,14 @@ import sys
 import os
 
 if(len(sys.argv) >= 7):
-    fastq_r1 = sys.argv[1]
-    fastq_r2 = sys.argv[2]
-    samfile = sys.argv[3]
-    logfile = sys.argv[4]
-    final_outfile = sys.argv[5]
-    fraglengthlimit = int(sys.argv[6]) #if set to 0 save all frag lengths
+    process_dir=sys.argv[1]
+    final_output_dir=sys.argv[2]
+    fastq_r1 = sys.argv[3]
+    fastq_r2 = sys.argv[4]
+    samfile = sys.argv[5]
+    logfile = sys.argv[6]
+    final_outfile = sys.argv[7]
+    fraglengthlimit = int(sys.argv[8]) #if set to 0 save all frag lengths
 else:
     print("Error: bad input.")
     exit(0)
@@ -174,8 +176,11 @@ def run_cmd(cmd_str, f):
     f.write("output = " + output.decode("utf-8") + '\n')
     return output
 
+logfile=final_output_dir+'/'+logfile
 with open(logfile,'w') as fw:
     fw.write("Input parameters:\n")
+    fw.write("process dir = " + process_dir + "\n")
+    fw.write("final output dir = " + final_output_dir + "\n")
     fw.write("fastq R1 = " + fastq_r1 + "\n")
     fw.write("fastq R2 = " + fastq_r2 + "\n")
     fw.write("samfile = "+samfile+'\n')
@@ -195,7 +200,10 @@ with open(logfile,'w') as fw:
         step5=True # only for PE
         step6=True
 
-        output_dir = os.path.split(fastq_r1)[0] + '/'
+        output_dir = process_dir + '/' #os.path.split(fastq_r1)[0] + '/'
+        fastq_r1=output_dir+fastq_r1
+        fastq_r2=output_dir+fastq_r2
+        samfile=output_dir+samfile
         if(type=="PE"):
             trimmed_r1 = fastq_r1.rstrip(".fastq.gz") + "_val_1.fq.gz"  # should fix this.
             trimmed_r2 = fastq_r2.rstrip(".fastq.gz") + "_val_2.fq.gz"  # should fix this.
@@ -225,9 +233,9 @@ with open(logfile,'w') as fw:
             run_cmd("fastqc " + fastq_r1, fw)
             if(type=="PE"):
                 run_cmd("fastqc " + fastq_r2, fw)
-                run_cmd("trim_galore --paired --fastqc --output_dir " + output_dir + " " + fastq_r1 + " " + fastq_r2, fw)
+                run_cmd("trim_galore --paired --fastqc --length 20 --quality 30 --output_dir " + output_dir + " " + fastq_r1 + " " + fastq_r2, fw)
             else: # SE
-                run_cmd("trim_galore --fastqc --length 10 --output_dir " + output_dir + " " + fastq_r1, fw)
+                run_cmd("trim_galore --fastqc --length 30 --quality 30 --output_dir " + output_dir + " " + fastq_r1, fw)
             fw.write('\n')
 
         # Step 'align'
@@ -248,7 +256,7 @@ with open(logfile,'w') as fw:
                 run_cmd("samtools view -q 30 -b " + samfile + " > " + bamfile, fw)
             fw.write('\n')
 
-        # Step 2, Picard remove duplicates:
+        # Step 2, Picard remove duplicates: TODO change so that this step is only done in case of PE not SE
         if(step2):
             fw.write("Step 2: Picard remove duplicates.\n")
             run_cmd("samtools sort " + bamfile + " > " + sortedbamfile, fw)
@@ -309,9 +317,9 @@ with open(logfile,'w') as fw:
             fw.write("Step 6: Convert bedGraph files to final txt output file with columns for W and C coverage every 1kb.\n")
             fw.flush()
             if(type == "PE"):
-                convert_bedGraph_to_txt(bedGraph_fwd, bedGraph_rev, final_outfile)
+                convert_bedGraph_to_txt(bedGraph_fwd, bedGraph_rev, final_output_dir+'/'+final_outfile)
             else:
-                convert_bedGraph_to_txt_SE(bedGraph_fwd, bedGraph_rev, final_outfile)
+                convert_bedGraph_to_txt_SE(bedGraph_fwd, bedGraph_rev, final_output_dir+'/'+final_outfile)
 
     except subprocess.CalledProcessError as e:
         fw.write("Exception occured (CalledProcessError): \n")
