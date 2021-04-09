@@ -15,11 +15,11 @@ import sys
 import os
 
 if(len(sys.argv) >= 3):
-    data_dir = sys.argv[1]
-    input_txt_file = sys.argv[2]
-    sites_file = sys.argv[3]
-    fpkm_prefix = sys.argv[4]
-    results_dir = sys.argv[5]
+    data_dir = sys.argv[1]         # base directory
+    input_txt_file = sys.argv[2]   #input txt file with the w and c reads for your data set
+    sites_file = sys.argv[3]    # file name containing gene TSS and TTS sites with fpkm information
+    fpkm_prefix = sys.argv[4]   # cell type / column name for fpkm info
+    results_dir = sys.argv[5]   # output directory
 else:
     print("Missing command line input.  Attempting to run with default settings.")
     data_dir = "/Users/sarahkeegan/okseq_data"
