@@ -224,8 +224,9 @@ with open(logfile,'w') as fw:
         bamfile_rev = bedfile_rev_sorted[:-11] + ".bam"
         sortedbamfile_fwd = bamfile_fwd[:-4] + ".sorted.bam"
         sortedbamfile_rev = bamfile_rev[:-4] + ".sorted.bam"
-        bedGraph_fwd = bamfile_fwd[:-4] + '.bedGraph'
-        bedGraph_rev = bamfile_rev[:-4] + '.bedGraph'
+
+        bedGraph_fwd = bamfile_fwd[:-4] + '.bedGraph' # 1000bp bins
+        bedGraph_rev = bamfile_rev[:-4] + '.bedGraph' # 1000bp bins
 
         # Step 'trim'
         if(step_trim):
@@ -304,6 +305,8 @@ with open(logfile,'w') as fw:
                 #convert to bedGraph
                 run_cmd("bamCoverage -b " + sortedbamfile_fwd + " -o " + bedGraph_fwd + " --binSize 1000 --outFileFormat bedgraph", fw)
                 run_cmd("bamCoverage -b " + sortedbamfile_rev + " -o " + bedGraph_rev + " --binSize 1000 --outFileFormat bedgraph", fw)
+
+
         else:
             if(step3):
                 fw.write("Step 3 (SE): Run genomeCoverageBed to convert bam to bedGraph for each strand.\n")
@@ -320,7 +323,6 @@ with open(logfile,'w') as fw:
                 convert_bedGraph_to_txt(bedGraph_fwd, bedGraph_rev, final_output_dir+'/'+final_outfile)
             else:
                 convert_bedGraph_to_txt_SE(bedGraph_fwd, bedGraph_rev, final_output_dir+'/'+final_outfile)
-
     except subprocess.CalledProcessError as e:
         fw.write("Exception occured (CalledProcessError): \n")
         fw.write("return_code="+str(e.returncode)+'\n')

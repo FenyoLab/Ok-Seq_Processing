@@ -22,7 +22,7 @@ if(len(sys.argv) >= 3):
     results_dir = sys.argv[5]   # output directory
 else:
     print("Missing command line input.  Attempting to run with default settings.")
-    data_dir = "/Users/sarahkeegan/okseq_data"
+    data_dir = "/Users/sarahkeegan/Dropbox/mac_files/fenyolab/data_and_results/huang" #"/Users/sarahkeegan/okseq_data"
     input_txt_file = "/raw_files/rpe/rpe_edu_2.txt"
     sites_file = "hgTables_filtered_with_fpkm_first.txt"
     fpkm_prefix = "RPE1"
