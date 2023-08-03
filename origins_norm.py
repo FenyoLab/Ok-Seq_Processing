@@ -12,7 +12,7 @@ if len(sys.argv) >= 3:
     output_dir = sys.argv[2]  # output directory
 else:
     print("Missing command line input.  Attempting to run with default settings.")
-    filename = "/Users/snk218/Dropbox (NYU Langone Health)/mac_files/fenyolab/data_and_results/huang/raw_files/results/origins/rpe_edu_2-hanning60-origins.txt"
+    filename = "/Users/snk218/Dropbox (NYU Langone Health)/mac_files/fenyolab/data_and_results/huang/raw_files/results/origins/rpe_edu_1-hanning60-origins.txt"
     output_dir = "/Users/snk218/Dropbox (NYU Langone Health)/mac_files/fenyolab/data_and_results/huang/raw_files/results/origins"
 
 # read origins file
@@ -27,9 +27,9 @@ heights = []
 bins = []
 
 # log normalize DER score (height) to view data distribution
-df['height'] = scipy.stats.boxcox(df['height'], lmbda=0.1, alpha=None)
+#df['height'] = scipy.stats.boxcox(df['height'], lmbda=0.1, alpha=None)
 df['height-log'] = np.log10(df['height'])
-df['height-log'] = (df['height'])
+#df['height-log'] = (df['height'])
 
 # snsplot of normalized origins
 #sns.kdeplot(df['height-log'])
@@ -37,7 +37,7 @@ df['height-log'] = (df['height'])
 
 # calculate kde gaussian without plot to find fwhm
 kde = gaussian_kde(df['height-log'])
-x = np.linspace(df['height-log'].min(), df['height-log'].max(), 14137) #len(df))
+x = np.linspace(df['height-log'].min(), df['height-log'].max(), len(df))
 y = kde(x)
 
 plt.plot(x, y, color='black')
@@ -50,7 +50,7 @@ fullwidthhalfmax = x[rightpos] - x[leftpos]
 print(x[leftpos])
 
 plt.axvline(x[leftpos])
-plt.axvline(x[rightpos])
+
 plt.savefig(output_dir + '/' + fileroot + '-kde.png')
 plt.clf()
 
@@ -58,7 +58,7 @@ plt.clf()
 df['pos-up'] = df['pos'] + 10000
 df['pos-down'] = df['pos'] - 10000
 
-df_ = df[(df['height-log'] >= x[leftpos]) & (df['height-log'] <= x[rightpos])]
+df_ = df[df['height-log'] >= x[leftpos]]
 print(len(df_))
 
 # calculate kde gaussian without plot to find fwhm
