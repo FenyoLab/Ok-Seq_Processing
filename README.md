@@ -1,6 +1,6 @@
 # Ok-Seq_Processing
 
-This repository contains scripts for processing OkSeq data.  
+This repository contains scripts for processing OkSeq data.  It also contains a script for finding origins of replication using the DER method.
 
  (1) process_okseq_SE_PE.py and run_process_okseq.sh can be used to process FASTQ files to obtain text files contain OkSeq read density on W and C strand for every 1kb.
 
@@ -22,3 +22,8 @@ The input data is in the folder okseq_data.  Subfolders and their contents are a
 
 * strand_bias_plots: the results from running the script in step (4) above.  
 
+ORIGIN FINDING:
+
+The script find_origins.py with locate origins of replication.  The input is the Ok-Seq binned reads (W/C) from step (1) above.
+
+The script origins_norm.py can be used to log-normalize and filter the least efficient origins from the list.  
