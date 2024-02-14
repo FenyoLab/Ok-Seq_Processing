@@ -24,6 +24,10 @@ The input data is in the folder okseq_data.  Subfolders and their contents are a
 
 ORIGIN FINDING:
 
-The script find_origins.py with locate origins of replication.  The input is the Ok-Seq binned reads (W/C) from step (1) above.
+The script find_origins.py will locate origins of replication.  The input is the Ok-Seq binned reads (W/C) from step (1) above.
+
+The script calculate_scores_all.py will calculate and output various scoring metrics over all 1kb regions of the genome.  It will also output bedgraph files for these scores.
 
 The script origins_norm.py can be used to log-normalize and filter the least efficient origins from the list.  
+
+The jupyter notebook reldist_stats.ipynb demonstrates how statistical tests were calculated to compare the relative distances of origin calls to a genomic region of interest (TSS, TTS, etc) in 2 conditions (the input is a binned output from bedtools reldist).  
