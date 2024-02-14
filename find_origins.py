@@ -23,8 +23,8 @@ if len(sys.argv) >= 3:
     output_dir = sys.argv[2]        # output directory
 else:
     print("Missing command line input.  Attempting to run with default settings.")
-    filename = "/Users/snk218/Dropbox (NYU Langone Health)/mac_files/fenyolab/data_and_results/huang/raw_files/rpe_edu_2.txt"
-    output_dir = "/Users/snk218/Dropbox (NYU Langone Health)/mac_files/fenyolab/data_and_results/huang/raw_files/results/origins"
+    filename = "/raw_files/rpe_edu_2.txt"
+    output_dir = "/raw_files/results/origins"
 
 ############################
 
